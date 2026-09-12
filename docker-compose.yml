@@ -1,0 +1,45 @@
+version: '3.8'
+
+networks:
+  guac_lab_net:
+    name: guac_lab_net
+    driver: bridge
+
+services:
+  caddy:
+    image: caddy:latest
+    container_name: caddy_proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - HOST_IP=${HOST_IP} # Injected by the bash execution layer
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - guac_lab_net
+    restart: unless-stopped
+
+  guacamole:
+    image: guacamole/guacamole:latest
+    container_name: guacamole_web
+    environment:
+      - GUACD_HOSTNAME=guacd
+    volumes:
+      - ./config/guacamole/user-mapping.xml:/etc/guacamole/user-mapping.xml
+    networks:
+      - guac_lab_net
+    restart: unless-stopped
+
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: guacamole_daemon
+    networks:
+      - guac_lab_net
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

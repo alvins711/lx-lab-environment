@@ -1,0 +1,27 @@
+# Dynamic deployment files and runtime configurations
+docker-compose.users.yml
+config/guacamole/user-mapping.xml
+
+# Transient configuration directories and state caches
+config/guacamole/
+config/user_profiles/
+
+# Student code workspaces (preserves the folder structure if you add a .gitkeep)
+workspaces/*
+!workspaces/.gitkeep
+
+# Environment variables and secret overrides
+.env
+.env.local
+
+# Operating system and editor junk files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+#custom_bashrc.tmpl.local
+custom_bashrc.tmpl.std

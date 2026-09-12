@@ -1,0 +1,19 @@
+# Global configuration block setting the fallback certificate name
+{
+    default_sni {$HOST_IP}
+}
+
+# Your existing site block
+https://{$HOST_IP}, localhost {
+    tls internal
+
+    reverse_proxy guacamole:8080 {
+        header_up Host {upstream_hostport}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    
+    redir / /guacamole/ 308
+}
+
