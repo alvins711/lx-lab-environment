@@ -8,6 +8,7 @@ https://{$HOST_IP}, localhost {
     tls internal
 
     reverse_proxy guacamole:8080 {
+        flush_interval -1
         header_up Host {upstream_hostport}
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
