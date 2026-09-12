@@ -2,8 +2,9 @@
 
 DYNAMIC_COMPOSE="docker-compose.users.yml"
 GUAC_MAPPING="./config/guacamole/user-mapping.xml"
+LAB_NETWORK="guac_lab_net"
 
-echo "=== Claude Code Lab Stack Teardown ==="
+echo "=== Lab Stack Teardown ==="
 
 # Exit if no dynamic user deployment layout is found
 if [ ! -f "$DYNAMIC_COMPOSE" ]; then
@@ -11,9 +12,15 @@ if [ ! -f "$DYNAMIC_COMPOSE" ]; then
     exit 0
 fi
 
-echo "Spinning down running user sandboxes and removing configuration volumes..."
+echo "Spinning down running user sandboxes and removing configuration volumes and images..."
 # The -v flag clears out the named volumes so git locks/plugins completely reset for the next class
-docker compose -f docker-compose.yml -f docker-compose.users.yml down --remove-orphans -v
+docker compose -f docker-compose.yml -f docker-compose.users.yml down --remove-orphans -v --rmi local
+
+# Explicitly prune the persistent shared network segment bridge interface
+if docker network ls | grep -q "$LAB_NETWORK"; then
+    echo "Purging network architecture interface: $LAB_NETWORK..."
+    docker network rm "$LAB_NETWORK"
+fi
 
 echo "Resetting web mappings and clearing dynamic environments..."
 rm -f "$DYNAMIC_COMPOSE"
@@ -30,7 +37,7 @@ EOF
 fi
 
 echo ""
-read -p "Do you want to permanently delete all student code files from the host? (y/N): " PURGE_DATA
+read -p "Do you want to permanently delete all users code files from the host? (y/N): " PURGE_DATA
 
 if [[ "$PURGE_DATA" =~ ^[Yy]$ ]]; then
     echo "Purging host workspace directories..."
@@ -40,5 +47,5 @@ else
     echo "🛈 Workspace folder contents preserved inside ./workspaces."
 fi
 
-echo "=== Environment Sanitized ==="
+echo "=== Environment Deleted ==="
 

@@ -41,7 +41,6 @@ fi
 
 # 2. Initialize dynamic compose file layout
 cat << EOF > $DYNAMIC_COMPOSE
-version: '3.8'
 
 networks:
   guac_lab_net:
@@ -72,12 +71,12 @@ for i in $(seq -f "%02g" 1 $USER_COUNT); do
 
     # Append user service definition block using a Named Volume for .claude config
     cat << EOF >> $DYNAMIC_COMPOSE
-  claude_ssh_$USER_NAME:
+  workstation_$USER_NAME:
     build:
       context: .
       dockerfile: Dockerfile.lab
-    container_name: claude_ssh_$USER_NAME
-    hostname: $USER_NAME
+    container_name: workstation_$USER_NAME
+    hostname: workstation_$USER_NAME
     environment:
       - CLAUDE_CONFIG_DIR=/home/labuser/.claude
     volumes:
@@ -99,9 +98,9 @@ EOF
     cat << EOF >> $GUAC_MAPPING
     <!-- Access Profile for $USER_NAME -->
     <authorize username="$USER_NAME" password="$USER_PASS">
-        <connection name="Claude Sandbox ($USER_NAME)">
+        <connection name="Workstation Sandbox ($USER_NAME)">
             <protocol>ssh</protocol>
-            <param name="hostname">claude_ssh_$USER_NAME</param>
+            <param name="hostname">workstation_$USER_NAME</param>
             <param name="port">22</param>
             <param name="username">labuser</param>
             <param name="password">password123</param>
@@ -130,6 +129,6 @@ docker compose -f docker-compose.yml -f docker-compose.users.yml up -d --build
 
 echo ""
 echo "=================================================="
-echo " Lab is live! Direct your students to open:"
+echo " Lab is live! Connect to:"
 echo " https://$DETECTED_IP/guacamole/"
 echo "=================================================="

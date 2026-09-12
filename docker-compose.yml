@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   guac_lab_net:
     name: guac_lab_net
