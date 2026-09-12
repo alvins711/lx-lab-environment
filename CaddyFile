@@ -4,7 +4,7 @@
 }
 
 # Your existing site block
-https://{$HOST_IP}, localhost {
+{$HOST_IP}, localhost {
     tls internal
 
     reverse_proxy guacamole:8080 {
