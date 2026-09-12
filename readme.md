@@ -81,3 +81,16 @@ When your classroom session or testing period ends, clean up the running contain
 ./cleanup_lab.sh
 ```
 The script will ask if you want to permanently delete student workspace files from the host disk or preserve them for the next session.
+
+### Pre-setup & Troubleshooting: 
+When deploying on Windows, a few thing to consider:
+
+1. Install Docker on WSL instead of Hyper V
+2. Enable Docker host networking  
+	> Settings-\>Resources-\>Network-\>Enable host networking
+3. Configure WSL to mirrored networking mode - edit %USERPROFILE%\.wslconfig 
+	> [wsl2] networkingMode=mirrored
+4. Add firewall rule - Powershell  
+	> New-NetFirewallRule -DisplayName "Open HTTPS Port 443" -Direction Inbound -LocalPort 443 -Protocol TCP -Action Allow
+
+
