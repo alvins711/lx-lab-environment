@@ -8,15 +8,12 @@ The architecture automatically detects the machine's host LAN IP address at runt
 
 ## System Architecture
 
-[ Internet ] -> HTTPS -> 
-[ Caddy Proxy ] -> 
-HTTP (Port 8081) -> 
-[ Apache Guacamole ] ->
-SSH (Port 22) -> [ Isolated Student Containers ]
-├── Hostname: userXX
-├── RAM Cap: 512MB
-└── CPU Cap: 50% Core
-
+```text
+[ Internet ] -> HTTPS -> [ Caddy Proxy ] -> HTTP (Port 8080) -> [ Apache Guacamole ]-> SSH (Port 22) -> [ Isolated Student Containers ]
+																										├── Hostname: userXX
+																										├── RAM Cap: 512MB
+																										└── CPU Cap: 50% Core
+```
 ---
 
 ### Key Technical Enhancements
@@ -48,7 +45,7 @@ Ensure your project space mimics the layout below before execution:
 ### Step 1: Initialize Script Permissions
 Open your terminal on the host machine inside your project folder (`~/claude_lab`) and grant execution rights to your control scripts:
 ```bash
-chmod +x deploy_lab.sh cleanup_lab.sh
+chmod +x deploy_lab.sh cleanup_lab.sh manage_users.sh
 ```
 
 ### Step 2: Launch the Lab Environment
@@ -81,6 +78,12 @@ When your classroom session or testing period ends, clean up the running contain
 ./cleanup_lab.sh
 ```
 The script will ask if you want to permanently delete student workspace files from the host disk or preserve them for the next session.
+
+### Management
+After deployment you can view, add, remove users using themanagement script
+```bash
+./manage_users.sh
+```
 
 ### Pre-setup & Troubleshooting: 
 When deploying on Windows, a few thing to consider:
