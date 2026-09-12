@@ -16,13 +16,6 @@ The architecture automatically detects the machine's host LAN IP address at runt
 ```
 ---
 
-### Key Technical Enhancements
-* **Native Configuration Volumes:** Avoids host filesystem permission translation errors (`Operation not permitted` / `EACCES`), allowing Claude Code plugins (like the Boomi companion) to clone and compile dynamically.
-* **Fallback SNI Auto-Handling:** Patches `SSL_ERROR_INTERNAL_ERROR_ALERT` by configuring a default SNI fallback header inside Caddy for raw local IP navigation.
-* **No-Contamination Lifecycles:** Dynamic student configuration stacks are entirely ephemeral and decoupled from the baseline web proxy core routing engine.
-
----
-
 ## Project Repository Tree
 
 Ensure your project space mimics the layout below before execution:
@@ -43,7 +36,7 @@ Ensure your project space mimics the layout below before execution:
 ## Step-by-Step Instructions
 
 ### Step 1: Initialize Script Permissions
-Open your terminal on the host machine inside your project folder (`~/claude_lab`) and grant execution rights to your control scripts:
+Open your terminal on the host machine inside your project folder (`~/lx-lab-environment`) and grant execution rights to your control scripts:
 ```bash
 chmod +x deploy_lab.sh cleanup_lab.sh manage_users.sh
 ```
@@ -72,6 +65,11 @@ Once the script finishes, it will print a secure live link: `https://<DETECTED_I
 5. Once inside the browser terminal, type `claude` to start the AI agent, or use `vim` / `nano` for editing files.
 6. (Optional) Admin login: Username `guacadmin`, Password `password123`.
 
+### Management
+After deployment you can view, add, remove users using the management script
+```bash
+./manage_users.sh
+```
 ### Step 4: Tear Down and Clean Up
 When your classroom session or testing period ends, clean up the running containers and destroy the configuration volumes to wipe student tokens:
 ```bash
@@ -79,11 +77,7 @@ When your classroom session or testing period ends, clean up the running contain
 ```
 The script will ask if you want to permanently delete student workspace files from the host disk or preserve them for the next session.
 
-### Management
-After deployment you can view, add, remove users using themanagement script
-```bash
-./manage_users.sh
-```
+
 
 ### Pre-setup & Troubleshooting: 
 When deploying on Windows, a few thing to consider:
