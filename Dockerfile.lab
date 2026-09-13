@@ -15,18 +15,32 @@ RUN mkdir /var/run/sshd
 
 # Create a standard, non-root lab user
 RUN useradd -rm -d /home/labuser -s /bin/bash -g root -G sudo -u 1001 labuser
-# Set a default container-level password
-RUN echo 'labuser:password123' | chpasswd
+# Set a default container-level password (override via build arg)
+ARG SSH_PASSWORD=password123
+RUN echo "labuser:${SSH_PASSWORD}" | chpasswd
 
 # Copy custom .bashrc
 COPY custom_bashrc.tmpl /home/labuser/.bashrc
 
+# AI/LLM endpoint configuration (required via build args, sourced from .env)
+ARG ANTHROPIC_BASE_URL
+ARG ANTHROPIC_API_KEY
+ARG ANTHROPIC_AUTH_TOKEN
+ARG ANTHROPIC_MODEL
+
+# Persist AI/LLM environment variables into /etc/environment so they are
+# available in every login shell (SSH sessions do NOT inherit the container's
+# process environment; /etc/environment is the standard place for this).
+RUN printf '%s\n' \
+    "CLAUDE_CONFIG_DIR=/home/labuser/.claude" \
+    "ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}" \
+    "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}" \
+    "ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN}" \
+    "ANTHROPIC_MODEL=${ANTHROPIC_MODEL}" \
+    >> /etc/environment
+
 # Install Claude Code globally so it is pre-cached for users
 RUN npm install -g @anthropic-ai/claude-code
-
-# Set up the workspace mounting target
-WORKDIR /workspace
-RUN chown -R labuser:root /workspace
 
 # FIX: Pre-create the configuration paths and hand ownership to labuser
 RUN mkdir -p /home/labuser/.claude/plugins && chown -R labuser:root /home/labuser/.claude

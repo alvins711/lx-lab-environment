@@ -21,14 +21,18 @@ The architecture automatically detects the machine's host LAN IP address at runt
 Ensure your project space mimics the layout below before execution:
 
 ```text
-~/claude_lab/
+~/lx-lab-environment/
+├── .env
 ├── .gitignore
 ├── Caddyfile
-├── Dockerfile.lab
-├── README.md
 ├── cleanup_lab.sh
+├── custom_bashrc.tmpl
+├── custom_profile.tmpl
 ├── deploy_lab.sh
-└── docker-compose.yml
+├── docker-compose.yml
+├── Dockerfile.lab
+├── manage_users.sh
+└── readme.md
 ```
 
 ---
@@ -40,6 +44,8 @@ Open your terminal on the host machine inside your project folder (`~/lx-lab-env
 ```bash
 chmod +x deploy_lab.sh cleanup_lab.sh manage_users.sh
 ```
+
+Optionally, edit the .env  file to modify usernames and passwords.
 
 ### Step 2: Launch the Lab Environment
 Run the deployment automation script:

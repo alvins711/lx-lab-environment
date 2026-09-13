@@ -1,8 +1,19 @@
 #!/bin/bash
 
+# Load environment configuration from .env if present
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
+
 DYNAMIC_COMPOSE="docker-compose.users.yml"
 GUAC_MAPPING="./config/guacamole/user-mapping.xml"
 LAB_NETWORK="guac_lab_net"
+
+# Credential configuration (override via .env)
+USER_PREFIX="${USER_PREFIX:-user}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-password123}"
 
 echo "=== Lab Stack Teardown ==="
 
@@ -29,7 +40,7 @@ rm -f "$DYNAMIC_COMPOSE"
 if [ -f "$GUAC_MAPPING" ]; then
     cat << EOF > $GUAC_MAPPING
 <user-mapping>
-    <authorize username="guacadmin" password="password123">
+    <authorize username="guacadmin" password="$ADMIN_PASSWORD">
     </authorize>
 </user-mapping>
 EOF
@@ -41,8 +52,8 @@ read -p "Do you want to permanently delete all users code files from the host? (
 
 if [[ "$PURGE_DATA" =~ ^[Yy]$ ]]; then
     echo "Purging host workspace directories..."
-    rm -rf ./workspaces/user*
-    rm -rf ./claude_config/user*
+    rm -rf ./workspaces/${USER_PREFIX}*
+    rm -rf ./claude_config/${USER_PREFIX}*
     echo "✔ Workspaces completely scrubbed."
 else
     echo "🛈 Workspace folder contents preserved inside ./workspaces."

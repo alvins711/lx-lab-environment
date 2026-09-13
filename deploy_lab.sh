@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Load environment configuration from .env if present
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
+
 # 1. Automatically detect the machine's primary local IP address
 # Works reliably on Debian, Ubuntu, AlmaLinux, RHEL, and Raspberry Pi OS
 DETECTED_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7}')
@@ -26,9 +33,21 @@ fi
 DYNAMIC_COMPOSE="docker-compose.users.yml"
 GUAC_MAPPING="./config/guacamole/user-mapping.xml"
 
-# Resource constraint variables
-CPU_LIMIT="0.5"       
-MEM_LIMIT="512m"      
+# Resource constraint variables (override via .env)
+CPU_LIMIT="${CPU_LIMIT:-0.5}"
+MEM_LIMIT="${MEM_LIMIT:-512m}"
+
+# Credential configuration (override via .env)
+USER_PREFIX="${USER_PREFIX:-user}"
+PASS_PREFIX="${PASS_PREFIX:-user}"
+SSH_PASSWORD="${SSH_PASSWORD:-password123}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-password123}"
+
+# Claude endpoint configuration (required via .env)
+ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:?ANTHROPIC_BASE_URL must be set in .env}"
+ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY must be set in .env}"
+ANTHROPIC_AUTH_TOKEN="${ANTHROPIC_AUTH_TOKEN:?ANTHROPIC_AUTH_TOKEN must be set in .env}"
+ANTHROPIC_MODEL="${ANTHROPIC_MODEL:?ANTHROPIC_MODEL must be set in .env}"
 
 # Ensure host directory structures exist safely
 mkdir -p "./config/guacamole"
@@ -53,7 +72,7 @@ EOF
 cat << EOF > $GUAC_MAPPING
 <user-mapping>
     <!-- Default Infrastructure Administrator Account -->
-    <authorize username="guacadmin" password="password123">
+    <authorize username="guacadmin" password="$ADMIN_PASSWORD">
     </authorize>
 
 EOF
@@ -62,12 +81,20 @@ echo "Generating access keys and environment spaces..."
 
 # 4. Build unique profiles per student sandbox
 for i in $(seq -f "%02g" 1 $USER_COUNT); do
-    USER_NAME="user$i"
-    USER_PASS="Boomi$i" 
+    USER_NAME="${USER_PREFIX}$i"
+    USER_PASS="${PASS_PREFIX}$i" 
     
-    # Provision workspace folders with full host read/write permissions
+    # Provision persistent home directory folders with full host read/write permissions
     mkdir -p "./workspaces/$USER_NAME"
     chmod -R 777 "./workspaces/$USER_NAME"
+
+    # Seed the shell profile into the persistent home directory (only if absent)
+    if [ ! -f "./workspaces/$USER_NAME/.bashrc" ]; then
+        cp "custom_bashrc.tmpl" "./workspaces/$USER_NAME/.bashrc"
+    fi
+    if [ ! -f "./workspaces/$USER_NAME/.profile" ]; then
+        cp "custom_profile.tmpl" "./workspaces/$USER_NAME/.profile"
+    fi
 
     # Provision local-disk directory for persistent .claude config
     mkdir -p "./claude_config/$USER_NAME"
@@ -79,12 +106,22 @@ for i in $(seq -f "%02g" 1 $USER_COUNT); do
     build:
       context: .
       dockerfile: Dockerfile.lab
+      args:
+        - SSH_PASSWORD=${SSH_PASSWORD}
+        - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}
+        - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+        - ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN}
+        - ANTHROPIC_MODEL=${ANTHROPIC_MODEL}
     container_name: workstation_$USER_NAME
     hostname: workstation_$USER_NAME
     environment:
       - CLAUDE_CONFIG_DIR=/home/labuser/.claude
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL}
     volumes:
-      - ./workspaces/$USER_NAME:/workspace
+      - ./workspaces/$USER_NAME:/home/labuser
       - ./claude_config/$USER_NAME:/home/labuser/.claude  # <-- Named volume here
     deploy:
       resources:
@@ -107,7 +144,7 @@ EOF
             <param name="hostname">workstation_$USER_NAME</param>
             <param name="port">22</param>
             <param name="username">labuser</param>
-            <param name="password">password123</param>
+            <param name="password">$SSH_PASSWORD</param>
         </connection>
     </authorize>
 
@@ -118,7 +155,7 @@ done
 cat << EOF >> $DYNAMIC_COMPOSE
 
 volumes:
-$(for i in $(seq -f "%02g" 1 $USER_COUNT); do echo "  claude_config_user$i:"; done)
+$(for i in $(seq -f "%02g" 1 $USER_COUNT); do echo "  claude_config_${USER_PREFIX}$i:"; done)
 EOF
 
 # Close the XML structure properly
