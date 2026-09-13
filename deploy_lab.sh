@@ -69,6 +69,10 @@ for i in $(seq -f "%02g" 1 $USER_COUNT); do
     mkdir -p "./workspaces/$USER_NAME"
     chmod -R 777 "./workspaces/$USER_NAME"
 
+    # Provision local-disk directory for persistent .claude config
+    mkdir -p "./claude_configs/$USER_NAME"
+    chmod -R 777 "./claude_configs/$USER_NAME"
+
     # Append user service definition block using a Named Volume for .claude config
     cat << EOF >> $DYNAMIC_COMPOSE
   workstation_$USER_NAME:
@@ -81,7 +85,7 @@ for i in $(seq -f "%02g" 1 $USER_COUNT); do
       - CLAUDE_CONFIG_DIR=/home/labuser/.claude
     volumes:
       - ./workspaces/$USER_NAME:/workspace
-      - claude_config_$USER_NAME:/home/labuser/.claude  # <-- Named volume here
+      - ./claude_config/$USER_NAME:/home/labuser/.claude  # <-- Named volume here
     deploy:
       resources:
         limits:

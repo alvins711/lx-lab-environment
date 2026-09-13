@@ -105,7 +105,7 @@ EOF
       - CLAUDE_CONFIG_DIR=/home/labuser/.claude
     volumes:
       - ./workspaces/$CURRENT_USER:/workspace
-      - claude_config_$CURRENT_USER:/home/labuser/.claude
+      - ./claude_config/$CURRENT_USER:/home/labuser/.claude
     deploy:
       resources:
         limits:
@@ -173,8 +173,21 @@ elif [ "$CHOICE" == "2" ]; then
     rm -f "${GUAC_MAPPING}.tmp"
 
     # 3. Clear disk workspace folder
-    rm -rf "./workspaces/$USER_NAME"
-    echo "✔ Cleared host workspace data directories."
+    #rm -rf "./workspaces/$USER_NAME"
+    #echo "✔ Cleared host workspace data directories."
+    echo ""
+    read -p "Do you want to permanently delete all user's code files from the host? (y/N): " PURGE_DATA
+
+    if [[ "$PURGE_DATA" =~ ^[Yy]$ ]]; then
+        echo "Purging host workspace directories..."
+        rm -rf ./workspaces/$USER_NAME
+        rm -rf ./claude_configs/$USER_NAME
+        echo "✔ Workspaces completely scrubbed."
+    else
+        echo "🛈 Workspace folder contents preserved inside ./workspaces and ./claude_configs."
+    fi
+
+    echo "=== Environment Deleted ==="
 
     # 4. REBUILD THE COMPOSER FILE STATE CLEANLY
     cat << EOF > $DYNAMIC_COMPOSE
@@ -201,7 +214,7 @@ EOF
       - CLAUDE_CONFIG_DIR=/home/labuser/.claude
     volumes:
       - ./workspaces/$CURRENT_USER:/workspace
-      - claude_config_$CURRENT_USER:/home/labuser/.claude
+      - ./claude_config_$CURRENT_USER:/home/labuser/.claude
     deploy:
       resources:
         limits:

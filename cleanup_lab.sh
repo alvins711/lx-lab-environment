@@ -42,6 +42,7 @@ read -p "Do you want to permanently delete all users code files from the host? (
 if [[ "$PURGE_DATA" =~ ^[Yy]$ ]]; then
     echo "Purging host workspace directories..."
     rm -rf ./workspaces/user*
+    rm -rf ./claude_configs/user*
     echo "✔ Workspaces completely scrubbed."
 else
     echo "🛈 Workspace folder contents preserved inside ./workspaces."
