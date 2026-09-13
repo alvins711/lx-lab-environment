@@ -9,6 +9,8 @@ config/user_profiles/
 # Student code workspaces (preserves the folder structure if you add a .gitkeep)
 workspaces/*
 !workspaces/.gitkeep
+claude_config/*
+!claude_config/.gitkeep
 
 # Environment variables and secret overrides
 .env

@@ -181,10 +181,10 @@ elif [ "$CHOICE" == "2" ]; then
     if [[ "$PURGE_DATA" =~ ^[Yy]$ ]]; then
         echo "Purging host workspace directories..."
         rm -rf ./workspaces/$USER_NAME
-        rm -rf ./claude_configs/$USER_NAME
+        rm -rf ./claude_config/$USER_NAME
         echo "✔ Workspaces completely scrubbed."
     else
-        echo "🛈 Workspace folder contents preserved inside ./workspaces and ./claude_configs."
+        echo "🛈 Workspace folder contents preserved inside ./workspaces and ./claude_config."
     fi
 
     echo "=== Environment Deleted ==="
