@@ -43,11 +43,11 @@ PASS_PREFIX="${PASS_PREFIX:-user}"
 SSH_PASSWORD="${SSH_PASSWORD:-password123}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-password123}"
 
-# Claude endpoint configuration (required via .env)
-ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:?ANTHROPIC_BASE_URL must be set in .env}"
-ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY must be set in .env}"
-ANTHROPIC_AUTH_TOKEN="${ANTHROPIC_AUTH_TOKEN:?ANTHROPIC_AUTH_TOKEN must be set in .env}"
-ANTHROPIC_MODEL="${ANTHROPIC_MODEL:?ANTHROPIC_MODEL must be set in .env}"
+# Claude endpoint configuration (optional via .env, may be empty)
+ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:-}"
+ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
+ANTHROPIC_AUTH_TOKEN="${ANTHROPIC_AUTH_TOKEN:-}"
+ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-}"
 
 # Ensure host directory structures exist safely
 mkdir -p "./config/guacamole"

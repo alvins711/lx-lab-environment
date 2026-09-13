@@ -60,7 +60,7 @@ PASS_PREFIX=user
 SSH_PASSWORD=password123
 ADMIN_PASSWORD=password123
 
-# Claude endpoint configuration (REQUIRED)
+# Claude endpoint configuration (optional, may be left empty)
 ANTHROPIC_BASE_URL=http://localhost:11434
 ANTHROPIC_API_KEY=your-api-key
 ANTHROPIC_AUTH_TOKEN=your-auth-token
@@ -77,14 +77,14 @@ ANTHROPIC_MODEL=your/model-name:tag
 | `PASS_PREFIX` | No | `user` | Prefix for student passwords (`user01`, `user02`...). |
 | `SSH_PASSWORD` | No | `password123` | Password for the `labuser` account inside each sandbox. |
 | `ADMIN_PASSWORD` | No | `password123` | Password for the `guacadmin` Guacamole account. |
-| `ANTHROPIC_BASE_URL` | **Yes** | — | Base URL of the LLM endpoint (e.g. an Ollama or Anthropic-compatible server). |
-| `ANTHROPIC_API_KEY` | **Yes** | — | API key sent to the endpoint (e.g. `your-api-key`). |
-| `ANTHROPIC_AUTH_TOKEN` | **Yes** | — | Auth token sent to the endpoint (e.g. `your-auth-token`). |
-| `ANTHROPIC_MODEL` | **Yes** | — | Model identifier to use (e.g. `your/model-name:tag`). |
+| `ANTHROPIC_BASE_URL` | No | *(empty)* | Base URL of the LLM endpoint (e.g. an Ollama or Anthropic-compatible server). |
+| `ANTHROPIC_API_KEY` | No | *(empty)* | API key sent to the endpoint (e.g. `your-api-key`). |
+| `ANTHROPIC_AUTH_TOKEN` | No | *(empty)* | Auth token sent to the endpoint (e.g. `your-auth-token`). |
+| `ANTHROPIC_MODEL` | No | *(empty)* | Model identifier to use (e.g. `your/model-name:tag`). |
 
 ### How the AI variables are applied
 
-The four `ANTHROPIC_*` values are passed to the container as **Docker build args** and baked into `/etc/environment`. This makes them available in every SSH login shell (visible via `printenv`), not just the container's entrypoint process. If any of the four are missing, `deploy_lab.sh` exits with a clear error before building.
+The four `ANTHROPIC_*` values are passed to the container as **Docker build args** and baked into `/etc/environment`. This makes them available in every SSH login shell (visible via `printenv`), not just the container's entrypoint process. All four are **optional** and may be left empty — if unset, they default to an empty string and the sandbox simply has no AI endpoint configured.
 
 ---
 
@@ -96,7 +96,7 @@ Open your terminal on the host machine inside your project folder (`~/lx-lab-env
 chmod +x deploy_lab.sh cleanup_lab.sh manage_users.sh
 ```
 
-Optionally, edit the `.env` file to modify usernames, passwords, resource limits, and the AI endpoint (see [Configuring the `.env` File](#configuring-the-env-file) below). The `ANTHROPIC_*` variables are **required** — the deploy script will fail fast if any are missing.
+Optionally, edit the `.env` file to modify usernames, passwords, resource limits, and the AI endpoint (see [Configuring the `.env` File](#configuring-the-env-file) below). The `ANTHROPIC_*` variables are **optional** and may be left empty.
 
 ### Step 2: Launch the Lab Environment
 Run the deployment automation script:
