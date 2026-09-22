@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Load environment configuration from .env if present
 if [ -f .env ]; then
@@ -23,9 +24,19 @@ if [ ! -f "$DYNAMIC_COMPOSE" ]; then
     exit 0
 fi
 
-echo "Spinning down running user sandboxes and removing configuration volumes and images..."
-# The -v flag clears out the named volumes so git locks/plugins completely reset for the next class
-docker compose -f docker-compose.yml -f docker-compose.users.yml down --remove-orphans -v --rmi local
+echo ""
+echo "Full teardown will also delete the locally-built lab images (--rmi local)"
+echo "and the named config volumes (-v) tied to docker-compose.users.yml."
+read -p "Proceed with full teardown, including images and volumes? (y/N): " CONFIRM_TEARDOWN
+
+if [[ "$CONFIRM_TEARDOWN" =~ ^[Yy]$ ]]; then
+    echo "Spinning down running user sandboxes and removing configuration volumes and images..."
+    # The -v flag clears out the named volumes so git locks/plugins completely reset for the next class
+    docker compose -f docker-compose.yml -f docker-compose.users.yml down --remove-orphans -v --rmi local
+else
+    echo "Stopping containers only — images and volumes are kept."
+    docker compose -f docker-compose.yml -f docker-compose.users.yml down --remove-orphans
+fi
 
 # Explicitly prune the persistent shared network segment bridge interface
 if docker network ls | grep -q "$LAB_NETWORK"; then
@@ -38,7 +49,7 @@ rm -f "$DYNAMIC_COMPOSE"
 
 # Clear out user lists, protecting the root admin credentials
 if [ -f "$GUAC_MAPPING" ]; then
-    cat << EOF > $GUAC_MAPPING
+    cat << EOF > "$GUAC_MAPPING"
 <user-mapping>
     <authorize username="guacadmin" password="$ADMIN_PASSWORD">
     </authorize>
@@ -60,4 +71,3 @@ else
 fi
 
 echo "=== Environment Deleted ==="
-
