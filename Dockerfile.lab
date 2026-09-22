@@ -21,8 +21,13 @@ RUN echo 'labuser:password123' | chpasswd
 # Copy custom .bashrc
 COPY custom_bashrc.tmpl /home/labuser/.bashrc
 
+# Temporarily disable SSL verification, install the package, and re-enable it
+RUN npm config set strict-ssl false \
+    && npm install -g @anthropic-ai/claude-code \
+    && npm config set strict-ssl true
+
 # Install Claude Code globally so it is pre-cached for users
-RUN npm install -g @anthropic-ai/claude-code
+# RUN npm install -g @anthropic-ai/claude-code
 
 # Set up the workspace mounting target
 WORKDIR /workspace
