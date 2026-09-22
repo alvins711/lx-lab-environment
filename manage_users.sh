@@ -1,9 +1,28 @@
 #!/bin/bash
 
+# Load environment configuration from .env if present
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
+
 DYNAMIC_COMPOSE="docker-compose.users.yml"
 GUAC_MAPPING="./config/guacamole/user-mapping.xml"
-CPU_LIMIT="0.5"
-MEM_LIMIT="512m"
+CPU_LIMIT="${CPU_LIMIT:-0.5}"
+MEM_LIMIT="${MEM_LIMIT:-512m}"
+
+# Credential configuration (override via .env)
+USER_PREFIX="${USER_PREFIX:-user}"
+PASS_PREFIX="${PASS_PREFIX:-user}"
+SSH_PASSWORD="${SSH_PASSWORD:-password123}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-password123}"
+
+# Claude endpoint configuration (override via .env)
+ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:-http://192.168.68.102:11434}"
+ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-ollama}"
+ANTHROPIC_AUTH_TOKEN="${ANTHROPIC_AUTH_TOKEN:-ollama}"
+ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-jacokon/qwen3.8-27b-heretic-ara:latest}"
 
 # Automatically detect the machine's primary local IP address for the roster view
 DETECTED_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7}')
@@ -51,8 +70,8 @@ if [ "$CHOICE" == "1" ]; then
         fi
     done
 
-    USER_NAME="user$USER_ID"
-    USER_PASS="Boomi$USER_ID"
+    USER_NAME="${USER_PREFIX}$USER_ID"
+    USER_PASS="${PASS_PREFIX}$USER_ID"
 
     if grep -q "username=\"$USER_NAME\"" "$GUAC_MAPPING"; then
         echo "⚠️ User $USER_NAME already exists in Guacamole configuration."
@@ -61,9 +80,17 @@ if [ "$CHOICE" == "1" ]; then
 
     echo "Adding $USER_NAME to the running lab environment..."
 
-    # 1. Setup filesystem workspace paths
+    # 1. Setup filesystem home directory paths
     mkdir -p "./workspaces/$USER_NAME"
     chmod -R 777 "./workspaces/$USER_NAME"
+
+    # Seed the shell profile into the persistent home directory (only if absent)
+    if [ ! -f "./workspaces/$USER_NAME/.bashrc" ]; then
+        cp "custom_bashrc.tmpl" "./workspaces/$USER_NAME/.bashrc"
+    fi
+    if [ ! -f "./workspaces/$USER_NAME/.profile" ]; then
+        cp "custom_profile.tmpl" "./workspaces/$USER_NAME/.profile"
+    fi
 
     # 2. Inject Authorization routing block safely into Guacamole XML map
     XML_CONTENT=$(cat "$GUAC_MAPPING")
@@ -73,7 +100,7 @@ if [ "$CHOICE" == "1" ]; then
             <param name=\"hostname\">workstation_$USER_NAME</param>
             <param name=\"port\">22</param>
             <param name=\"username\">labuser</param>
-            <param name=\"password\">password123</param>
+            <param name=\"password\">$SSH_PASSWORD</param>
         </connection>
     </authorize>
 </user-mapping>"
@@ -89,10 +116,10 @@ networks:
 services:
 EOF
 
-    for folder in ./workspaces/user*; do
+    for folder in ./workspaces/${USER_PREFIX}*; do
         if [ -d "$folder" ]; then
-            CURRENT_NUM=$(basename "$folder" | sed 's/user//')
-            CURRENT_USER="user$CURRENT_NUM"
+            CURRENT_NUM=$(basename "$folder" | sed "s/${USER_PREFIX}//")
+            CURRENT_USER="${USER_PREFIX}$CURRENT_NUM"
 
             cat << EOF >> $DYNAMIC_COMPOSE
   workstation_$CURRENT_USER:
@@ -103,8 +130,12 @@ EOF
     hostname: workstation_$CURRENT_USER
     environment:
       - CLAUDE_CONFIG_DIR=/home/labuser/.claude
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL}
     volumes:
-      - ./workspaces/$CURRENT_USER:/workspace
+      - ./workspaces/$CURRENT_USER:/home/labuser
       - ./claude_config/$CURRENT_USER:/home/labuser/.claude
     deploy:
       resources:
@@ -123,10 +154,10 @@ EOF
 volumes:
 EOF
 
-    for folder in ./workspaces/user*; do
+    for folder in ./workspaces/${USER_PREFIX}*; do
         if [ -d "$folder" ]; then
-            CURRENT_NUM=$(basename "$folder" | sed 's/user//')
-            echo "  claude_config_user$CURRENT_NUM:" >> $DYNAMIC_COMPOSE
+            CURRENT_NUM=$(basename "$folder" | sed "s/${USER_PREFIX}//")
+            echo "  claude_config_${USER_PREFIX}$CURRENT_NUM:" >> $DYNAMIC_COMPOSE
         fi
     done
 
@@ -153,7 +184,7 @@ elif [ "$CHOICE" == "2" ]; then
 
     # Automatically pad with a leading zero if a single digit is passed (e.g., 2 -> 02)
     USER_NUM=$(printf "%02g" "$USER_ID")
-    USER_NAME="user$USER_NUM"
+    USER_NAME="${USER_PREFIX}$USER_NUM"
 
     if [ ! -d "./workspaces/$USER_NAME" ]; then
         echo "❌ Error: User $USER_NAME workspace path not found on disk."
@@ -198,10 +229,10 @@ networks:
 services:
 EOF
 
-    for folder in ./workspaces/user*; do
+    for folder in ./workspaces/${USER_PREFIX}*; do
         if [ -d "$folder" ]; then
-            CURRENT_NUM=$(basename "$folder" | sed 's/user//')
-            CURRENT_USER="user$CURRENT_NUM"
+            CURRENT_NUM=$(basename "$folder" | sed "s/${USER_PREFIX}//")
+            CURRENT_USER="${USER_PREFIX}$CURRENT_NUM"
 
             cat << EOF >> $DYNAMIC_COMPOSE
   workstation_$CURRENT_USER:
@@ -212,9 +243,13 @@ EOF
     hostname: workstation_$CURRENT_USER
     environment:
       - CLAUDE_CONFIG_DIR=/home/labuser/.claude
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL}
     volumes:
-      - ./workspaces/$CURRENT_USER:/workspace
-      - ./claude_config_$CURRENT_USER:/home/labuser/.claude
+      - ./workspaces/$CURRENT_USER:/home/labuser
+      - ./claude_config/$CURRENT_USER:/home/labuser/.claude
     deploy:
       resources:
         limits:
@@ -232,10 +267,10 @@ EOF
 volumes:
 EOF
 
-    for folder in ./workspaces/user*; do
+    for folder in ./workspaces/${USER_PREFIX}*; do
         if [ -d "$folder" ]; then
-            CURRENT_NUM=$(basename "$folder" | sed 's/user//')
-            echo "  claude_config_user$CURRENT_NUM:" >> $DYNAMIC_COMPOSE
+            CURRENT_NUM=$(basename "$folder" | sed "s/${USER_PREFIX}//")
+            echo "  claude_config_${USER_PREFIX}$CURRENT_NUM:" >> $DYNAMIC_COMPOSE
         fi
     done
 
@@ -252,12 +287,12 @@ elif [ "$CHOICE" == "3" ]; then
     echo "--------------------------------------------------------------------------"
     
     USER_FOUND=false
-    for folder in ./workspaces/user*; do
+    for folder in ./workspaces/${USER_PREFIX}*; do
         if [ -d "$folder" ]; then
             USER_FOUND=true
-            CURRENT_NUM=$(basename "$folder" | sed 's/user//')
-            ROSTER_USER="user$CURRENT_NUM"
-            ROSTER_PASS="Boomi$CURRENT_NUM"
+            CURRENT_NUM=$(basename "$folder" | sed "s/${USER_PREFIX}//")
+            ROSTER_USER="${USER_PREFIX}$CURRENT_NUM"
+            ROSTER_PASS="${PASS_PREFIX}$CURRENT_NUM"
             ROSTER_URL="https://$DETECTED_IP/guacamole/"
             
             printf "%-12s | %-12s | %-42s\n" "$ROSTER_USER" "$ROSTER_PASS" "$ROSTER_URL"

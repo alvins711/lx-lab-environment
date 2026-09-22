@@ -21,15 +21,70 @@ The architecture automatically detects the machine's host LAN IP address at runt
 Ensure your project space mimics the layout below before execution:
 
 ```text
-~/claude_lab/
+~/lx-lab-environment/
+├── .env
 ├── .gitignore
 ├── Caddyfile
-├── Dockerfile.lab
-├── README.md
 ├── cleanup_lab.sh
+├── custom_bashrc.tmpl
+├── custom_profile.tmpl
 ├── deploy_lab.sh
-└── docker-compose.yml
+├── docker-compose.yml
+├── Dockerfile.lab
+├── manage_users.sh
+└── readme.md
 ```
+
+---
+
+## Configuring the `.env` File
+
+All runtime configuration is read from a `.env` file in the project root. Both `deploy_lab.sh` and `cleanup_lab.sh` source it automatically, so you only need to create it **once** before your first deployment.
+
+> **Note:** `.env` is listed in `.gitignore` and is **not** committed to the repository. Create it locally on each host.
+
+### Creating the file
+
+Copy the template below into a new file named `.env` in the project root (`~/lx-lab-environment/.env`):
+
+```bash
+# Lab Workstation Resource Limits (per sandbox)
+CPU_LIMIT=0.5
+MEM_LIMIT=512m
+
+# User Credential Configuration
+USER_PREFIX=user
+PASS_PREFIX=user
+
+# Guacamole / SSH settings
+SSH_PASSWORD=password123
+ADMIN_PASSWORD=password123
+
+# Claude endpoint configuration (optional, may be left empty)
+ANTHROPIC_BASE_URL=http://localhost:11434
+ANTHROPIC_API_KEY=your-api-key
+ANTHROPIC_AUTH_TOKEN=your-auth-token
+ANTHROPIC_MODEL=your/model-name:tag
+```
+
+### Variable reference
+
+| Variable | Required | Default | Description |
+|----------|:--------:|---------|-------------|
+| `CPU_LIMIT` | No | `0.5` | CPU cores allocated to each sandbox (e.g. `0.5` = half a core). |
+| `MEM_LIMIT` | No | `512m` | Memory cap per sandbox (e.g. `512m`, `1g`). |
+| `USER_PREFIX` | No | `user` | Prefix for student usernames (`user01`, `user02`...). |
+| `PASS_PREFIX` | No | `user` | Prefix for student passwords (`user01`, `user02`...). |
+| `SSH_PASSWORD` | No | `password123` | Password for the `labuser` account inside each sandbox. |
+| `ADMIN_PASSWORD` | No | `password123` | Password for the `guacadmin` Guacamole account. |
+| `ANTHROPIC_BASE_URL` | No | *(empty)* | Base URL of the LLM endpoint (e.g. an Ollama or Anthropic-compatible server). |
+| `ANTHROPIC_API_KEY` | No | *(empty)* | API key sent to the endpoint (e.g. `your-api-key`). |
+| `ANTHROPIC_AUTH_TOKEN` | No | *(empty)* | Auth token sent to the endpoint (e.g. `your-auth-token`). |
+| `ANTHROPIC_MODEL` | No | *(empty)* | Model identifier to use (e.g. `your/model-name:tag`). |
+
+### How the AI variables are applied
+
+The four `ANTHROPIC_*` values are passed to the container as **Docker build args** and baked into `/etc/environment`. This makes them available in every SSH login shell (visible via `printenv`), not just the container's entrypoint process. All four are **optional** and may be left empty — if unset, they default to an empty string and the sandbox simply has no AI endpoint configured.
 
 ---
 
@@ -40,6 +95,8 @@ Open your terminal on the host machine inside your project folder (`~/lx-lab-env
 ```bash
 chmod +x deploy_lab.sh cleanup_lab.sh manage_users.sh
 ```
+
+Optionally, edit the `.env` file to modify usernames, passwords, resource limits, and the AI endpoint (see [Configuring the `.env` File](#configuring-the-env-file) below). The `ANTHROPIC_*` variables are **optional** and may be left empty.
 
 ### Step 2: Launch the Lab Environment
 Run the deployment automation script:

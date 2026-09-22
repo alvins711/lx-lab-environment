@@ -15,19 +15,15 @@ RUN mkdir /var/run/sshd
 
 # Create a standard, non-root lab user
 RUN useradd -rm -d /home/labuser -s /bin/bash -g root -G sudo -u 1001 labuser
-# Set a default container-level password
-RUN echo 'labuser:password123' | chpasswd
+# Set a default container-level password (override via build arg)
+ARG SSH_PASSWORD=password123
+RUN echo "labuser:${SSH_PASSWORD}" | chpasswd
 
 # Copy custom .bashrc
 COPY custom_bashrc.tmpl /home/labuser/.bashrc
 
-# Temporarily disable SSL verification, install the package, and re-enable it
-RUN npm config set strict-ssl false \
-    && npm install -g @anthropic-ai/claude-code \
-    && npm config set strict-ssl true
-
 # Install Claude Code globally so it is pre-cached for users
-# RUN npm install -g @anthropic-ai/claude-code
+RUN npm install -g @anthropic-ai/claude-code
 
 # Set up the workspace mounting target
 WORKDIR /workspace
