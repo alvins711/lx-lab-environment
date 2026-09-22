@@ -15,15 +15,17 @@ RUN mkdir /var/run/sshd
 
 # Create a standard, non-root lab user
 RUN useradd -rm -d /home/labuser -s /bin/bash -g root -G sudo -u 1001 labuser
-# Set a default container-level password (override via build arg)
-ARG SSH_PASSWORD=password123
-RUN echo "labuser:${SSH_PASSWORD}" | chpasswd
 
 # Copy custom .bashrc
 COPY custom_bashrc.tmpl /home/labuser/.bashrc
 
+# zscaler issue
+RUN npm config set strict-ssl false \
+    && npm install -g @anthropic-ai/claude-code \
+    && npm config set strict-ssl true
+
 # Install Claude Code globally so it is pre-cached for users
-RUN npm install -g @anthropic-ai/claude-code
+# RUN npm install -g @anthropic-ai/claude-code
 
 # Set up the workspace mounting target
 WORKDIR /workspace
@@ -33,6 +35,15 @@ RUN chown -R labuser:root /workspace
 RUN mkdir -p /home/labuser/.claude/plugins && chown -R labuser:root /home/labuser/.claude
 EXPOSE 22
 
-# Start the SSH daemon on container initialization
-CMD ["/usr/sbin/sshd", "-D"]
+# entrypoint.sh writes SSH_PASSWORD and the ANTHROPIC_* values into the
+# container at *start* time (from the runtime environment docker-compose
+# already injects) instead of baking them into this image at *build* time.
+# SSH sessions don't inherit the container's process environment, so a login
+# shell still needs them persisted somewhere (/etc/environment) — this just
+# does it without ever writing a secret into an image layer, and lets a
+# rotated password/key take effect on container restart instead of rebuild.
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
+# Start the SSH daemon on container initialization
+CMD ["/usr/local/bin/entrypoint.sh"]

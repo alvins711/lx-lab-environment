@@ -31,6 +31,8 @@ Ensure your project space mimics the layout below before execution:
 ├── deploy_lab.sh
 ├── docker-compose.yml
 ├── Dockerfile.lab
+├── entrypoint.sh
+├── lab_lib.sh
 ├── manage_users.sh
 └── readme.md
 ```
@@ -84,7 +86,7 @@ ANTHROPIC_MODEL=your/model-name:tag
 
 ### How the AI variables are applied
 
-The four `ANTHROPIC_*` values are passed to the container as **Docker build args** and baked into `/etc/environment`. This makes them available in every SSH login shell (visible via `printenv`), not just the container's entrypoint process. All four are **optional** and may be left empty — if unset, they default to an empty string and the sandbox simply has no AI endpoint configured.
+The four `ANTHROPIC_*` values (plus `SSH_PASSWORD`) are passed to each container as **runtime environment variables** via `docker-compose.users.yml` — never as Docker build args, so they are never baked into the image's layer history. On container start, `entrypoint.sh` writes them into `/etc/environment` and sets the `labuser` account password from `SSH_PASSWORD`, which makes them available in every SSH login shell (visible via `printenv`), not just the container's entrypoint process. All four `ANTHROPIC_*` values are **optional** and may be left empty — if unset, they default to an empty string and the sandbox simply has no AI endpoint configured. Because this injection happens at container *start* rather than image *build*, rotating a key or password just requires restarting the affected container(s) — not rebuilding the image.
 
 ---
 
@@ -132,7 +134,7 @@ When your classroom session or testing period ends, clean up the running contain
 ```bash
 ./cleanup_lab.sh
 ```
-The script will ask if you want to permanently delete student workspace files from the host disk or preserve them for the next session.
+The script will ask if you want to permanently delete student workspace files from the host disk or preserve them for the next session, and it will confirm before it destroys images and config volumes.
 
 
 
@@ -146,5 +148,4 @@ When deploying on Windows, a few thing to consider:
 	> [wsl2] networkingMode=mirrored
 4. Add firewall rule - Powershell  
 	> New-NetFirewallRule -DisplayName "Open HTTPS Port 443" -Direction Inbound -LocalPort 443 -Protocol TCP -Action Allow
-
 
