@@ -12,6 +12,9 @@ workspaces/*
 
 claude_config/*
 
+# Archived student work (timestamped folders created at teardown)
+archives/
+
 # Environment variables and secret overrides
 .env
 .env.local

@@ -32,6 +32,7 @@ Ensure your project space mimics the layout below before execution:
 ├── docker-compose.yml
 ├── Dockerfile.lab
 ├── entrypoint.sh
+├── lab.sh
 ├── lab_lib.sh
 ├── manage_users.sh
 └── readme.md
@@ -83,6 +84,7 @@ ANTHROPIC_MODEL=your/model-name:tag
 | `ANTHROPIC_API_KEY` | No | *(empty)* | API key sent to the endpoint (e.g. `your-api-key`). |
 | `ANTHROPIC_AUTH_TOKEN` | No | *(empty)* | Auth token sent to the endpoint (e.g. `your-auth-token`). |
 | `ANTHROPIC_MODEL` | No | *(empty)* | Model identifier to use (e.g. `your/model-name:tag`). |
+| `ARCHIVE_ROOT` | No | `./archives` | Where teardown moves saved student work, under a timestamped subfolder. |
 
 ### How the AI variables are applied
 
@@ -95,13 +97,20 @@ The four `ANTHROPIC_*` values (plus `SSH_PASSWORD`) are passed to each container
 ### Step 1: Initialize Script Permissions
 Open your terminal on the host machine inside your project folder (`~/lx-lab-environment`) and grant execution rights to your control scripts:
 ```bash
-chmod +x deploy_lab.sh cleanup_lab.sh manage_users.sh
+chmod +x lab.sh deploy_lab.sh cleanup_lab.sh manage_users.sh
 ```
 
 Optionally, edit the `.env` file to modify usernames, passwords, resource limits, and the AI endpoint (see [Configuring the `.env` File](#configuring-the-env-file) below). The `ANTHROPIC_*` variables are **optional** and may be left empty.
 
+### Quick Start: `lab.sh`
+`lab.sh` is a single menu-driven entry point that wraps `deploy_lab.sh`, `manage_users.sh`, and `cleanup_lab.sh` — run it and pick an option instead of remembering which script to call:
+```bash
+./lab.sh
+```
+It doesn't replace the three scripts below (each still works standalone, and `lab.sh` just calls them), it's there so you don't have to remember their names. The rest of this section documents what each option does.
+
 ### Step 2: Launch the Lab Environment
-Run the deployment automation script:
+Run the deployment automation script (or option 1 in `./lab.sh`):
 ```bash
 ./deploy_lab.sh
 ```
@@ -125,16 +134,28 @@ Once the script finishes, it will print a secure live link: `https://<DETECTED_I
 6. (Optional) Admin login: Username `guacadmin`, Password `password123`.
 
 ### Management
-After deployment you can view, add, remove users using the management script
+After deployment you can view, add, remove users using the management script (or option 2 in `./lab.sh`)
 ```bash
 ./manage_users.sh
 ```
 ### Step 4: Tear Down and Clean Up
-When your classroom session or testing period ends, clean up the running containers and destroy the configuration volumes to wipe student tokens:
+When your classroom session or testing period ends, clean up the running containers and destroy the configuration volumes to wipe student tokens (or option 3 in `./lab.sh`):
 ```bash
 ./cleanup_lab.sh
 ```
-The script will ask if you want to permanently delete student workspace files from the host disk or preserve them for the next session, and it will confirm before it destroys images and config volumes.
+It confirms before destroying images and config volumes, then asks what should happen to the student work on disk:
+
+1. **Archive** — moves every `workspaces/<user>` and `claude_config/<user>` folder into `./archives/<YYYYMMDD-HHMMSS>/`, keeping the same two-folder layout. The next deployment starts clean, and a previous class can be restored by moving the folders back.
+2. **Leave in place** — the next deployment reuses the folders, so students resume with their existing files.
+3. **Delete permanently.**
+
+`./manage_users.sh` offers the same archive option when deleting an individual user (archive or delete only — leaving that user's folder behind would silently recreate their sandbox on the next deploy, since the compose file is generated from the folders present on disk).
+
+Archives are excluded from git via `.gitignore`. To restore one:
+```bash
+mv ./archives/20260922-143015/workspaces/*     ./workspaces/
+mv ./archives/20260922-143015/claude_config/*  ./claude_config/
+```
 
 
 

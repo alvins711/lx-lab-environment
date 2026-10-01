@@ -1,4 +1,23 @@
-FROM node:lts-bookworm-slim
+# Pinned to Node 24 (current LTS as of Sept 2026) on Debian bookworm, by tag
+# *and* digest — the tag alone can be repointed upstream at any time, the
+# digest can't. To move to a newer Node/base image later, update both
+# together (`docker pull node:24-bookworm-slim` and copy the new digest it
+# reports).
+FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
+
+# Pin the OS package set to a specific Debian snapshot instead of "whatever
+# bookworm has today" — otherwise the exact openssh-server/git/sudo/curl/
+# vim/nano versions (and their transitive deps) silently drift across
+# rebuilds, weeks or months apart, with no record of what changed.
+# Bump DEBIAN_SNAPSHOT deliberately (e.g. to pick up a CVE fix) rather than
+# letting it float. If a build ever fails with a 404 from snapshot.debian.org,
+# pick a nearby valid timestamp from https://snapshot.debian.org/archive/debian/
+# and update this value.
+ARG DEBIAN_SNAPSHOT=20260901T000000Z
+RUN printf '%s\n%s\n' \
+    "deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
+    "deb [check-valid-until=no] https://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
+    > /etc/apt/sources.list
 
 # Install SSH server, Git, and system dependencies
 RUN apt-get update && apt-get install -y \
@@ -20,12 +39,13 @@ RUN useradd -rm -d /home/labuser -s /bin/bash -g root -G sudo -u 1001 labuser
 COPY custom_bashrc.tmpl /home/labuser/.bashrc
 
 # zscaler issue
+# Claude Code CLI version is pinned explicitly — bump deliberately when you
+# want the newer release, rather than picking up whatever "latest" resolves
+# to on rebuild day.
+ARG CLAUDE_CODE_VERSION=2.1.278
 RUN npm config set strict-ssl false \
-    && npm install -g @anthropic-ai/claude-code \
+    && npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
     && npm config set strict-ssl true
-
-# Install Claude Code globally so it is pre-cached for users
-# RUN npm install -g @anthropic-ai/claude-code
 
 # Set up the workspace mounting target
 WORKDIR /workspace

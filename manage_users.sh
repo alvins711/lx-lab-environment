@@ -85,17 +85,10 @@ if [ "$CHOICE" == "1" ]; then
 
     echo "Adding $USER_NAME to the running lab environment..."
 
-    # 1. Setup filesystem home directory paths
-    mkdir -p "./workspaces/$USER_NAME"
-    chmod -R 777 "./workspaces/$USER_NAME"
-
-    # Seed the shell profile into the persistent home directory (only if absent)
-    if [ ! -f "./workspaces/$USER_NAME/.bashrc" ]; then
-        cp "custom_bashrc.tmpl" "./workspaces/$USER_NAME/.bashrc"
-    fi
-    if [ ! -f "./workspaces/$USER_NAME/.profile" ]; then
-        cp "custom_profile.tmpl" "./workspaces/$USER_NAME/.profile"
-    fi
+    # 1. Setup filesystem home directory paths (shared with deploy_lab.sh via
+    # lab_lib.sh — this also creates ./claude_config/$USER_NAME, which this
+    # script previously skipped, leaving Docker to create it as root)
+    provision_user_dirs "$USER_NAME"
 
     # 2. Inject the new <authorize> block immediately before the closing
     # </user-mapping> tag. Targeting that specific line with awk is safer
@@ -172,21 +165,13 @@ elif [ "$CHOICE" == "2" ]; then
     cat "${GUAC_MAPPING}.tmp" > "$GUAC_MAPPING"
     rm -f "${GUAC_MAPPING}.tmp"
 
-    echo ""
-    read -p "Do you want to permanently delete all user's code files from the host? (y/N): " PURGE_DATA
+    # 3. Decide what happens to this student's work. "Leave in place" is not
+    # offered here: the compose file below is regenerated from the folders on
+    # disk, so keeping the folder would silently bring the sandbox back on the
+    # next deploy, without a Guacamole login to reach it.
+    prompt_user_data_disposition "remove" "$USER_NAME"
 
-    if [[ "$PURGE_DATA" =~ ^[Yy]$ ]]; then
-        echo "Purging host workspace directories..."
-        rm -rf "./workspaces/$USER_NAME"
-        rm -rf "./claude_config/$USER_NAME"
-        echo "✔ Workspaces completely scrubbed."
-    else
-        echo "🛈 Workspace folder contents preserved inside ./workspaces and ./claude_config."
-    fi
-
-    echo "=== Environment Deleted ==="
-
-    # 3. Rebuild the compose file from whatever workspace folders remain
+    # 4. Rebuild the compose file from whatever workspace folders remain
     rebuild_dynamic_compose
 
     echo "✔ Successfully removed $USER_NAME completely from active roster."
